@@ -31,13 +31,18 @@ export default function WorkoutCard({ selectedDate, authUserId }: WorkoutCardPro
     async function loadWorkouts() {
       if (!selectedDate) return;
       setDirty(false);
+      if (!authUserId) {
+        setWorkout(emptyWorkout(selectedDate));
+        setPreviousWorkout(null);
+        setLoadedDate(selectedDate);
+        return;
+      }
       const stored = localStorage.getItem(`compound-workout-${selectedDate}`) ?? localStorage.getItem(`calorie-workout-${selectedDate}`);
       setWorkout(stored ? JSON.parse(stored) : emptyWorkout(selectedDate));
       setLoadedDate(selectedDate);
       const prior = previousDate(selectedDate);
       const storedPrior = localStorage.getItem(`compound-workout-${prior}`) ?? localStorage.getItem(`calorie-workout-${prior}`);
       setPreviousWorkout(storedPrior ? JSON.parse(storedPrior) : null);
-      if (!authUserId) return;
       try {
         const headers = await getSupabaseAuthHeaders();
         const [currentResponse, previousResponse] = await Promise.all([

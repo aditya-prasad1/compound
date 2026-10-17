@@ -134,8 +134,18 @@ export default function CompoundHome() {
       setHistoryError(error.message);
       return;
     }
+    localStorage.removeItem("compound-entries");
+    localStorage.removeItem("calorie-entries");
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("compound-workout-") || key.startsWith("calorie-workout-")) localStorage.removeItem(key);
+    }
+    setEntries([]);
+    setMessages(initialMessages);
+    setPending(null);
+    setPendingMessageId(null);
+    setHistoryError("");
     setShowSettings(false);
-    window.location.replace(window.location.origin);
+    window.location.replace(`${window.location.origin}/`);
   }
 
   async function loadHistory(date: string) {
