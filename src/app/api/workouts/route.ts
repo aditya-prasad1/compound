@@ -60,6 +60,7 @@ export async function POST(request: Request) {
     if (!body.date || !Array.isArray(body.exercises)) return NextResponse.json({ error: "A date and exercises are required." }, { status: 400 });
     const user = await getAuthenticatedUser(request);
     if (!user) return unauthorizedResponse();
+    if (!config().url || !config().key) return NextResponse.json({ error: "Supabase server environment variables are missing in this deployment." }, { status: 503 });
     const workoutResponse = await supabaseRequest("workouts?on_conflict=user_id,workout_date", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify({ user_id: user.id, workout_date: body.date }) });
     if (!workoutResponse.ok) return upstreamError(workoutResponse, "Could not save workout.");
     const workouts = await workoutResponse.json();

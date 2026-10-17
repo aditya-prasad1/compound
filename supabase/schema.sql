@@ -50,6 +50,9 @@ create table if not exists public.workouts (
   unique (user_id, workout_date)
 );
 
+create unique index if not exists workouts_user_date_unique
+  on public.workouts (user_id, workout_date);
+
 create table if not exists public.workout_exercises (
   id uuid primary key default gen_random_uuid(),
   workout_id uuid not null references public.workouts(id) on delete cascade,
