@@ -1,0 +1,10 @@
+{
+  "name": "compound.",
+  "short_name": "compound.",
+  "description": "Build better health through small, compounding actions.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": []
+}
