@@ -130,7 +130,12 @@ export default function CompoundHome() {
     const client = getSupabaseBrowserClient();
     if (!client) return;
     const { error } = await client.auth.signOut();
-    if (error) setHistoryError(error.message);
+    if (error) {
+      setHistoryError(error.message);
+      return;
+    }
+    setShowSettings(false);
+    window.location.replace(window.location.origin);
   }
 
   async function loadHistory(date: string) {
