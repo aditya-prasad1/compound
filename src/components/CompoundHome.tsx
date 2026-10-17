@@ -118,9 +118,10 @@ export default function CompoundHome() {
       return;
     }
     setHistoryError("");
+    const redirectTo = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
     const { error } = await client.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo },
     });
     if (error) setHistoryError(error.message);
   }
