@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     if (!body.date || !Array.isArray(body.exercises)) return NextResponse.json({ error: "A date and exercises are required." }, { status: 400 });
     const user = await getAuthenticatedUser(request);
     if (!user) return unauthorizedResponse();
-    const workoutResponse = await supabaseRequest("workouts", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify({ user_id: user.id, workout_date: body.date }) });
+    const workoutResponse = await supabaseRequest("workouts?on_conflict=user_id,workout_date", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify({ user_id: user.id, workout_date: body.date }) });
     if (!workoutResponse.ok) return NextResponse.json({ error: "Could not save workout." }, { status: 502 });
     const workout = (await workoutResponse.json())[0];
     const existingResponse = await supabaseRequest(`workout_exercises?workout_id=eq.${workout.id}&select=id`);

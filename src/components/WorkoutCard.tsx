@@ -5,7 +5,7 @@ import { exerciseCatalog, muscleGroups, makeSetId, makeWorkoutExerciseId, type E
 import { getSupabaseAuthHeaders } from "@/lib/supabase-browser";
 
 type Workout = { date: string; exercises: WorkoutExercise[] };
-type WorkoutCardProps = { selectedDate: string };
+type WorkoutCardProps = { selectedDate: string; authUserId: string | null };
 type PanelMode = "add" | "view";
 
 const localDateKey = (date: Date) => {
@@ -15,7 +15,7 @@ const localDateKey = (date: Date) => {
 const previousDate = (date: string) => { const value = new Date(`${date}T12:00:00`); value.setDate(value.getDate() - 1); return localDateKey(value); };
 const emptyWorkout = (date: string): Workout => ({ date, exercises: [] });
 
-export default function WorkoutCard({ selectedDate }: WorkoutCardProps) {
+export default function WorkoutCard({ selectedDate, authUserId }: WorkoutCardProps) {
   const [workout, setWorkout] = useState<Workout>(() => emptyWorkout(selectedDate));
   const [previousWorkout, setPreviousWorkout] = useState<Workout | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -37,7 +37,7 @@ export default function WorkoutCard({ selectedDate }: WorkoutCardProps) {
       const prior = previousDate(selectedDate);
       const storedPrior = localStorage.getItem(`compound-workout-${prior}`) ?? localStorage.getItem(`calorie-workout-${prior}`);
       setPreviousWorkout(storedPrior ? JSON.parse(storedPrior) : null);
-      if (!localStorage.getItem("compound-user-id")) return;
+      if (!authUserId) return;
       try {
         const headers = await getSupabaseAuthHeaders();
         const [currentResponse, previousResponse] = await Promise.all([
@@ -51,7 +51,7 @@ export default function WorkoutCard({ selectedDate }: WorkoutCardProps) {
       } catch { setMessage("Using this device's workout copy until sync is available."); }
     }
     void loadWorkouts();
-  }, [selectedDate]);
+  }, [selectedDate, authUserId]);
   useEffect(() => {
     if (selectedDate && loadedDate === selectedDate) localStorage.setItem(`compound-workout-${selectedDate}`, JSON.stringify(workout));
   }, [selectedDate, loadedDate, workout]);
@@ -80,7 +80,7 @@ export default function WorkoutCard({ selectedDate }: WorkoutCardProps) {
 
   async function saveWorkout() {
     setSaving(true); setMessage("");
-    if (!localStorage.getItem("compound-user-id")) { setMessage("Saved on this device. Sign in to sync workouts."); setDirty(false); setSaving(false); return; }
+    if (!authUserId) { setMessage("Saved on this device. Sign in to sync workouts."); setDirty(false); setSaving(false); return; }
     try {
       const response = await fetch("/api/workouts", { method: "POST", headers: { "Content-Type": "application/json", ...(await getSupabaseAuthHeaders()) }, body: JSON.stringify({ date: selectedDate, exercises: workout.exercises }) });
       const data = await response.json();
