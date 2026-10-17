@@ -86,7 +86,7 @@ export default function WorkoutCard({ selectedDate, authUserId }: WorkoutCardPro
       const data = await response.json();
       if (!response.ok || !data.persisted) throw new Error(data.error ?? "Workout sync failed.");
       setMessage("Workout saved."); setDirty(false);
-    } catch (error) { setMessage(error instanceof Error ? `${error.message} Saved on this device.` : "Saved on this device."); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Workout sync failed. Saved on this device."); }
     finally { setSaving(false); }
   }
 

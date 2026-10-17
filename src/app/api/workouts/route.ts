@@ -14,6 +14,11 @@ async function supabaseRequest(path: string, init: RequestInit = {}) {
   });
 }
 
+async function upstreamError(response: Response, fallback: string) {
+  const detail = await response.text();
+  return NextResponse.json({ error: detail || fallback }, { status: 502 });
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date");
@@ -56,26 +61,30 @@ export async function POST(request: Request) {
     const user = await getAuthenticatedUser(request);
     if (!user) return unauthorizedResponse();
     const workoutResponse = await supabaseRequest("workouts?on_conflict=user_id,workout_date", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify({ user_id: user.id, workout_date: body.date }) });
-    if (!workoutResponse.ok) return NextResponse.json({ error: "Could not save workout." }, { status: 502 });
-    const workout = (await workoutResponse.json())[0];
+    if (!workoutResponse.ok) return upstreamError(workoutResponse, "Could not save workout.");
+    const workouts = await workoutResponse.json();
+    const workout = workouts[0];
+    if (!workout?.id) return NextResponse.json({ error: "Supabase did not return the saved workout. Check the workouts table and unique constraint." }, { status: 502 });
     const existingResponse = await supabaseRequest(`workout_exercises?workout_id=eq.${workout.id}&select=id`);
-    if (!existingResponse.ok) return NextResponse.json({ error: "Could not update workout." }, { status: 502 });
+    if (!existingResponse.ok) return upstreamError(existingResponse, "Could not update workout.");
     const existing = await existingResponse.json();
     if (existing.length) {
       const deleteResponse = await supabaseRequest(`workout_exercises?workout_id=eq.${workout.id}`, { method: "DELETE" });
-      if (!deleteResponse.ok) return NextResponse.json({ error: "Could not replace workout exercises." }, { status: 502 });
+      if (!deleteResponse.ok) return upstreamError(deleteResponse, "Could not replace workout exercises.");
     }
     for (const [position, exercise] of body.exercises.entries()) {
       const exerciseResponse = await supabaseRequest("workout_exercises", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ workout_id: workout.id, exercise_id: exercise.exerciseId, exercise_name: exercise.name, muscle_group: exercise.muscleGroup, position }) });
-      if (!exerciseResponse.ok) throw new Error("Exercise save failed");
-      const savedExercise = (await exerciseResponse.json())[0];
+      if (!exerciseResponse.ok) return upstreamError(exerciseResponse, "Exercise save failed.");
+      const savedExercises = await exerciseResponse.json();
+      const savedExercise = savedExercises[0];
+      if (!savedExercise?.id) return NextResponse.json({ error: "Supabase did not return the saved exercise." }, { status: 502 });
       if (exercise.sets.length) {
         const setsResponse = await supabaseRequest("workout_sets", { method: "POST", body: JSON.stringify(exercise.sets.map((set, setNumber) => ({ workout_exercise_id: savedExercise.id, set_number: setNumber, reps: set.reps, weight_kg: set.weightKg }))) });
-        if (!setsResponse.ok) throw new Error("Set save failed");
+        if (!setsResponse.ok) return upstreamError(setsResponse, "Set save failed.");
       }
     }
     return NextResponse.json({ ok: true, persisted: true });
-  } catch {
-    return NextResponse.json({ error: "Could not save workout." }, { status: 502 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not save workout." }, { status: 502 });
   }
 }
