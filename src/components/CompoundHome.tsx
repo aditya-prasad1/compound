@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import type { Meal, MealItem } from "@/lib/nutrition";
 import { getSupabaseAuthHeaders, getSupabaseBrowserClient } from "@/lib/supabase-browser";
@@ -218,7 +219,25 @@ export default function CompoundHome() {
   const calorieStatus = progress < 34 ? "low" : progress < 80 ? "mid" : "good";
 
   return <main className="app-shell">
-    <header className="topbar"><div><div className="brand">compound<span>.</span></div><div className="eyebrow">small actions, lasting change</div></div><div className="topbar-actions"><label className="date-control-wrap"><span className="date-control">{selectedDate === today ? "Today" : formatDate(selectedDate)} <ChevronDown /></span><input ref={dateInputRef} className="navbar-date-picker" type="date" value={selectedDate} max={today} onChange={(event) => setSelectedDate(event.target.value)} aria-label="Choose date" /></label><button className="settings-button" onClick={() => setShowSettings(true)} aria-label="Open settings"><Sliders /></button></div></header>
+    <header className="topbar">
+      <div className="topbar-brand">
+        <Link href="/" className="brand">compound<span>.</span></Link>
+        <div className="eyebrow">small actions, lasting change</div>
+      </div>
+      <nav className="topbar-nav" aria-label="Main navigation">
+        <Link href="/" className="nav-tab active">Today</Link>
+        <Link href="/analytics" className="nav-tab">Analytics</Link>
+      </nav>
+      <div className="topbar-actions">
+        <label className="date-control-wrap">
+          <span className="date-control">{selectedDate === today ? "Today" : formatDate(selectedDate)} <ChevronDown /></span>
+          <input ref={dateInputRef} className="navbar-date-picker" type="date" value={selectedDate} max={today} onChange={(event) => setSelectedDate(event.target.value)} aria-label="Choose date" />
+        </label>
+        <button className="settings-button" onClick={() => setShowSettings(true)} aria-label="Open settings">
+          <Sliders />
+        </button>
+      </div>
+    </header>
     <section className="hero-summary"><div className="summary-layout"><div className="summary-main"><p className="section-kicker">{selectedDate === today ? "Daily intake" : `History · ${formatDate(selectedDate)}`}</p><div className="compound-line"><h1 className={calorieStatus}>{Math.round(totals.calories)} <span>/ {targets.calories} kcal</span></h1></div><div className={`progress-track ${calorieStatus}`}><div className="progress-fill" style={{ width: `${progress}%` }} /></div><div className="summary-foot"><span>{Math.max(0, Math.round(targets.calories - totals.calories))} kcal remaining</span><span>{Math.round(progress)}% of goal</span></div><div className="hero-actions"><button className="track-button" onClick={() => { setChatOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}><Plus />Track calories</button><button className="logs-button" onClick={() => setLogsOpen(true)}><ListIcon />View logs</button></div></div><div className="summary-meters" aria-label="Macronutrient summary"><Macro label="Protein" value={totals.protein_g} target={targets.protein} tone="dark" /><Macro label="Carbs" value={totals.carbs_g} target={targets.carbs} /><Macro label="Fat" value={totals.fat_g} target={targets.fat} /></div></div></section>
     <WorkoutCard selectedDate={selectedDate} authUserId={authUser?.id ?? null} />
     {logsOpen && <div className="logs-overlay"><section className="logs-panel" aria-label="Food logs"><div className="history-section"><div className="section-title"><div><p className="section-kicker">Journal</p><h2>Food logs</h2></div><button className="close-button" onClick={() => setLogsOpen(false)} aria-label="Close food logs"><Close /></button></div><div className="logs-toolbar"><span>{selectedDate === today ? "Today" : formatDate(selectedDate)}</span><button className="track-button compact" onClick={() => { setChatOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}><Plus />Track calories</button></div>{historyLoading && <span className="loading-label">Syncing</span>}{historyError && <p className="error-note">{historyError}</p>}{dayEntries.length ? <div className="entry-list">{[...dayEntries].reverse().map((entry) => <EntryRow entry={entry} key={entry.id} />)}</div> : <div className="empty-state"><div className="empty-mark">+</div><p>No meals logged {selectedDate === today ? "today" : "on this day"}.</p><button onClick={() => { setChatOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}>Start with a meal</button></div>}</div></section></div>}

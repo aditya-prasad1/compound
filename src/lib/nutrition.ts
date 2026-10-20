@@ -27,6 +27,20 @@ export const mealSchema = z.object({
 export type Meal = z.infer<typeof mealSchema>;
 export type MealItem = z.infer<typeof itemSchema>;
 
+export type Targets = { calories: number; protein: number; carbs: number; fat: number };
+
+export function localDateKey(date = new Date()): string {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10);
+}
+
+export function getTargets(calories: number, proteinGoal?: number | null): Targets {
+  if (!proteinGoal) return { calories, carbs: Math.round((calories * 0.5) / 4), protein: Math.round((calories * 0.2) / 4), fat: Math.round((calories * 0.3) / 9) };
+  const proteinCalories = Math.min(calories, proteinGoal * 4);
+  const remainingCalories = calories - proteinCalories;
+  return { calories, protein: Math.round(proteinGoal), carbs: Math.round((remainingCalories * 0.625) / 4), fat: Math.round((remainingCalories * 0.375) / 9) };
+}
+
 export function calculateTotals(items: MealItem[]): Meal["totals"] {
   return items.reduce(
     (totals, item) => ({

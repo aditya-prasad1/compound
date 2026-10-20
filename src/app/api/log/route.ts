@@ -5,6 +5,8 @@ import { getAuthenticatedUser, unauthorizedResponse } from "@/lib/supabase-serve
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date");
+  const from = searchParams.get("from") ?? searchParams.get("startDate");
+  const to = searchParams.get("to") ?? searchParams.get("endDate");
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const user = await getAuthenticatedUser(request);
@@ -12,8 +14,17 @@ export async function GET(request: Request) {
   if (!supabaseUrl || !serviceRoleKey) return NextResponse.json({ entries: [], persisted: false });
   if (!user) return unauthorizedResponse();
 
-  const query = new URLSearchParams({ user_id: `eq.${user.id}`, order: "created_at.asc", select: "id,description,meal,entry_date,created_at" });
-  if (date) query.set("entry_date", `eq.${date}`);
+  const query = new URLSearchParams({ user_id: `eq.${user.id}`, order: "entry_date.asc,created_at.asc", select: "id,description,meal,entry_date,created_at" });
+  if (date) {
+    query.set("entry_date", `eq.${date}`);
+  } else if (from && to) {
+    query.append("entry_date", `gte.${from}`);
+    query.append("entry_date", `lte.${to}`);
+  } else if (from) {
+    query.append("entry_date", `gte.${from}`);
+  } else if (to) {
+    query.append("entry_date", `lte.${to}`);
+  }
   const response = await fetch(`${supabaseUrl}/rest/v1/meal_entries?${query}`, {
     headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
     cache: "no-store",
