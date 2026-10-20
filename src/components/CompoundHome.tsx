@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import type { Meal, MealItem } from "@/lib/nutrition";
 import { getSupabaseAuthHeaders, getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { useTheme, type ThemeMode } from "@/lib/theme";
 import WorkoutCard from "@/components/WorkoutCard";
 
 type Message = { id: string; role: "user" | "assistant"; text?: string; meal?: Meal; logged?: boolean };
@@ -27,6 +28,7 @@ const getTargets = (calories: number, proteinGoal?: number | null): Targets => {
 };
 
 export default function CompoundHome() {
+  const { mode, effective, mounted, cycleTheme } = useTheme();
   const [today, setToday] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -233,6 +235,15 @@ export default function CompoundHome() {
           <span className="date-control">{selectedDate === today ? "Today" : formatDate(selectedDate)} <ChevronDown /></span>
           <input ref={dateInputRef} className="navbar-date-picker" type="date" value={selectedDate} max={today} onChange={(event) => setSelectedDate(event.target.value)} aria-label="Choose date" />
         </label>
+        <button
+          className="theme-toggle"
+          onClick={cycleTheme}
+          aria-label={mounted ? `Theme: ${effective}. Click to toggle` : "Toggle theme"}
+          title={mounted ? `Theme: ${effective}` : "Toggle theme"}
+          suppressHydrationWarning
+        >
+          <ThemeIcon mode={effective} />
+        </button>
         <button className="settings-button" onClick={() => setShowSettings(true)} aria-label="Open settings">
           <Sliders />
         </button>
@@ -258,3 +269,8 @@ function ChevronDown() { return <Icon><path d="m6 9 6 6 6-6" /></Icon>; }
 function Sliders() { return <Icon><path d="M4 6h16M7 12h10M10 18h4" /><circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="12" r="1.5" /><circle cx="12" cy="18" r="1.5" /></Icon>; }
 function Mic() { return <Icon><rect x="8" y="3" width="8" height="12" rx="4" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" /></Icon>; }
 function Spinner() { return <span className="spinner" aria-hidden="true" />; }
+function ThemeIcon({ mode }: { mode: ThemeMode }) {
+  if (mode === "dark") return <Icon><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></Icon>;
+  if (mode === "light") return <Icon><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></Icon>;
+  return <Icon><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /><path d="M16 12a4 4 0 0 1-4 4" strokeDasharray="2 2" /></Icon>;
+}

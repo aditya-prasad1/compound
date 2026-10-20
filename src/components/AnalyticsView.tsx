@@ -6,6 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import type { Meal } from "@/lib/nutrition";
 import { getTargets, localDateKey, type Targets } from "@/lib/nutrition";
 import { getSupabaseAuthHeaders, getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { useTheme } from "@/lib/theme";
 
 type DateRange = "7d" | "30d";
 
@@ -31,6 +32,7 @@ type EntryRecord = {
 };
 
 export default function AnalyticsView() {
+  const { effective, mounted, cycleTheme } = useTheme();
   const [range, setRange] = useState<DateRange>("7d");
   const [today, setToday] = useState("");
   const [loading, setLoading] = useState(true);
@@ -325,6 +327,15 @@ export default function AnalyticsView() {
         </nav>
 
         <div className="topbar-actions">
+          <button
+            className="theme-toggle"
+            onClick={cycleTheme}
+            aria-label={mounted ? `Theme: ${effective}. Click to toggle` : "Toggle theme"}
+            title={mounted ? `Theme: ${effective}` : "Toggle theme"}
+            suppressHydrationWarning
+          >
+            <ThemeIcon mode={effective} />
+          </button>
           <button
             className="settings-button"
             onClick={() => setShowSettings(true)}
@@ -1073,4 +1084,10 @@ function Close() {
 
 function Spinner() {
   return <span className="spinner" aria-hidden="true" />;
+}
+
+function ThemeIcon({ mode }: { mode: "light" | "dark" | "system" }) {
+  if (mode === "dark") return <Icon><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></Icon>;
+  if (mode === "light") return <Icon><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></Icon>;
+  return <Icon><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /><path d="M16 12a4 4 0 0 1-4 4" strokeDasharray="2 2" /></Icon>;
 }

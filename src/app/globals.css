@@ -30,9 +30,59 @@ svg { width: 18px; height: 18px; }
 .auth-section { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); }.auth-email { margin: 8px 0 14px; font-size: 13px; overflow-wrap: anywhere; }.google-button, .signout-button { width: 100%; min-height: 42px; border-radius: 999px; font-size: 13px; }.google-button { border: 0; background: var(--ink); color: #fff; }.signout-button { border: 1px solid var(--line); background: transparent; color: var(--ink); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Dark mode theme token overrides */
+/* ─── Dark mode tokens ────────────────────────────────────────────────────── */
+/* Applied by JS via data-theme="dark" on <html>; media query is the fallback  */
+/* for first-paint before JS runs (and for users who haven't set a preference). */
+
+[data-theme="dark"] {
+  --ink: #f5f5f7;
+  --muted: #86868b;
+  --line: #2c2c2e;
+  --paper: #000000;
+  --card: #1c1c1e;
+  --soft: #1c1c1e;
+  --blue: #2997ff;
+}
+
+/* Dark surface overrides */
+[data-theme="dark"] .composer,
+[data-theme="dark"] .meal-card,
+[data-theme="dark"] .settings input,
+[data-theme="dark"] .exercise-search,
+[data-theme="dark"] .set-row input {
+  background: #1c1c1e;
+  border-color: var(--line);
+  color: var(--ink);
+}
+[data-theme="dark"] .track-button,
+[data-theme="dark"] .confirm-button,
+[data-theme="dark"] .google-button {
+  background: #f5f5f7;
+  color: #000;
+}
+[data-theme="dark"] .modal-backdrop,
+[data-theme="dark"] .chat-overlay,
+[data-theme="dark"] .logs-overlay,
+[data-theme="dark"] .workout-overlay {
+  background: rgba(0,0,0,.65);
+}
+
+/* FIX: muscle-group selected chip — was white text on white background in dark */
+[data-theme="dark"] .muscle-filters button.selected {
+  background: #f5f5f7;
+  border-color: #f5f5f7;
+  color: #000;
+}
+
+/* FIX: chat sender bubble — was white text on near-white in dark mode */
+[data-theme="dark"] .message.user p {
+  background: #f5f5f7;
+  color: #111;
+}
+
+/* Prefers-color-scheme fallback (for users with no manual preference stored) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --ink: #f5f5f7;
     --muted: #86868b;
     --line: #2c2c2e;
@@ -41,19 +91,52 @@ svg { width: 18px; height: 18px; }
     --soft: #1c1c1e;
     --blue: #2997ff;
   }
-  .composer, .meal-card, .settings input, .exercise-search, .set-row input {
-    background: #1c1c1e;
-    border-color: var(--line);
-    color: var(--ink);
+  :root:not([data-theme="light"]):not([data-theme="dark"]) body,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) html {
+    background: var(--paper);
   }
-  .track-button, .confirm-button, .google-button {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .composer,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .meal-card,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .settings input,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .exercise-search,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .set-row input {
+    background: #1c1c1e;
+    border-color: #2c2c2e;
+    color: #f5f5f7;
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .muscle-filters button.selected {
+    background: #f5f5f7;
+    border-color: #f5f5f7;
+    color: #000;
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .message.user p {
+    background: #f5f5f7;
+    color: #111;
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .track-button,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .confirm-button,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .google-button {
     background: #f5f5f7;
     color: #000;
   }
-  .modal-backdrop, .chat-overlay, .logs-overlay, .workout-overlay {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .modal-backdrop,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .chat-overlay,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .logs-overlay,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .workout-overlay {
     background: rgba(0,0,0,.65);
   }
 }
+
+/* ─── Theme toggle button ─────────────────────────────────────────────────── */
+.theme-toggle {
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  border: 0; background: transparent; color: var(--ink);
+  border-radius: 50%; transition: background .15s ease;
+}
+.theme-toggle:hover { background: var(--soft); }
+.theme-toggle svg { width: 19px; height: 19px; }
+
 
 /* Navigation Tabs */
 .topbar-brand { display: flex; flex-direction: column; }
