@@ -48,18 +48,26 @@ function normalizeModelMeal(value: unknown) {
 }
 
 export async function POST(request: Request) {
+  let body: { message?: string; context?: string };
   try {
-    const body = (await request.json()) as { message?: string; context?: string };
-    const message = body.message?.trim();
-    if (!message) return NextResponse.json({ error: "Message is required." }, { status: 400 });
+    body = (await request.json()) as { message?: string; context?: string };
+  } catch {
+    return NextResponse.json({ error: "Invalid request format.", code: 400 }, { status: 400 });
+  }
 
-    if (!process.env.LLM_API_KEY) {
-      return NextResponse.json({ meal: demoEstimate(message), source: "demo", reply: "Here is an estimate. You can correct any quantity before logging." });
-    }
+  const message = body?.message?.trim();
+  if (!message) return NextResponse.json({ error: "Message is required.", code: 400 }, { status: 400 });
 
-    const configuredUrl = process.env.LLM_API_URL ?? "https://api.openai.com/v1/chat/completions";
-    const llmUrl = /\/chat\/completions\/?$/i.test(configuredUrl) ? configuredUrl : `${configuredUrl.replace(/\/$/, "")}/v1/chat/completions`;
-    const response = await fetch(llmUrl, {
+  if (!process.env.LLM_API_KEY) {
+    return NextResponse.json({ meal: demoEstimate(message), source: "demo", reply: "Here is an estimate. You can correct any quantity before logging." });
+  }
+
+  const configuredUrl = process.env.LLM_API_URL ?? "https://api.openai.com/v1/chat/completions";
+  const llmUrl = /\/chat\/completions\/?$/i.test(configuredUrl) ? configuredUrl : `${configuredUrl.replace(/\/$/, "")}/v1/chat/completions`;
+
+  let response: Response;
+  try {
+    response = await fetch(llmUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.LLM_API_KEY}` },
       signal: AbortSignal.timeout(20_000),
@@ -70,13 +78,66 @@ export async function POST(request: Request) {
         messages: [{ role: "system", content: systemPrompt }, { role: "user", content: `${body.context ?? ""}\n${message}` }],
       }),
     });
-    if (!response.ok) return NextResponse.json({ error: "The nutrition service is unavailable. Try again." }, { status: 502 });
+  } catch (error) {
+    const isTimeout = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    return NextResponse.json(
+      { error: "The service is unavailable. Please try again.", code: isTimeout ? 504 : 503 },
+      { status: isTimeout ? 504 : 503 }
+    );
+  }
+
+  if (!response.ok) {
+    let upstreamMessage = "";
+    try {
+      const errPayload = await response.json();
+      upstreamMessage = errPayload?.error?.message ?? (typeof errPayload?.error === "string" ? errPayload.error : "");
+    } catch {
+      // ignore
+    }
+
+    const isRateLimited = response.status === 429 || /rate[- ]?limit/i.test(upstreamMessage);
+    const isUnavailable = response.status === 503 || response.status === 502 || response.status === 504 || /unavailable|overloaded/i.test(upstreamMessage);
+
+    if (isRateLimited) {
+      return NextResponse.json(
+        { error: "The service is rate limited. Please try again tomorrow.", code: 429 },
+        { status: 429 }
+      );
+    }
+    if (isUnavailable) {
+      return NextResponse.json(
+        { error: "The service is unavailable. Please try again.", code: 503 },
+        { status: 503 }
+      );
+    }
+    if (response.status >= 500) {
+      return NextResponse.json(
+        { error: "The service is unavailable. Please try again.", code: response.status },
+        { status: response.status }
+      );
+    }
+    return NextResponse.json(
+      { error: upstreamMessage || "The service is unavailable. Please try again.", code: response.status },
+      { status: response.status }
+    );
+  }
+
+  try {
     const payload = await response.json();
     const parsed = normalizeModelMeal(parseModelJson(payload.choices?.[0]?.message?.content));
     const checked = mealSchema.parse(parsed);
     const meal = { ...checked, totals: calculateTotals(checked.items) };
-    return NextResponse.json({ meal, source: "llm", reply: meal.needs_clarification ? "One detail could change this estimate. What quantity or preparation should I use?" : "Here is an estimate. You can correct any quantity before logging." });
+    return NextResponse.json({
+      meal,
+      source: "llm",
+      reply: meal.needs_clarification
+        ? "One detail could change this estimate. What quantity or preparation should I use?"
+        : "Here is an estimate. You can correct any quantity before logging.",
+    });
   } catch {
-    return NextResponse.json({ error: "I could not interpret that meal. Please try a little more detail." }, { status: 422 });
+    return NextResponse.json(
+      { error: "I could not interpret that meal. Please try a little more detail.", code: 422 },
+      { status: 422 }
+    );
   }
 }

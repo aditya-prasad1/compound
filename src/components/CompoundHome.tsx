@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { getErrorReply } from "@/lib/errorMessage";
 import type { User } from "@supabase/supabase-js";
 import type { Meal, MealItem } from "@/lib/nutrition";
 import { getSupabaseAuthHeaders, getSupabaseBrowserClient } from "@/lib/supabase-browser";
@@ -28,7 +29,7 @@ const getTargets = (calories: number, proteinGoal?: number | null): Targets => {
 };
 
 export default function CompoundHome() {
-  const { mode, effective, mounted, cycleTheme } = useTheme();
+  const { effective, mounted, cycleTheme } = useTheme();
   const [today, setToday] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -179,13 +180,44 @@ export default function CompoundHome() {
     if (/undo that|undo last/i.test(normalized)) { const last = [...dayEntries].pop(); if (last) { setEntries((current) => current.filter((entry) => entry.id !== last.id)); setMessages((current) => [...current, { id: makeId(), role: "assistant", text: `Removed ${last.description}.` }]); } else setMessages((current) => [...current, { id: makeId(), role: "assistant", text: "There is no recent entry to undo." }]); return; }
     setPendingRequests((count) => count + 1);
     try {
-      const response = await fetch("/api/interpret", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message, context: pending ? JSON.stringify(pending) : "" }) });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      const response = await fetch("/api/interpret", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, context: pending ? JSON.stringify(pending) : "" }),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const statusCode = response.status || data?.code;
+        const rawError = typeof data?.error === "string" ? data.error : "";
+        const replyText = getErrorReply(statusCode, rawError);
+        setMessages((current) => [...current, { id: makeId(), role: "assistant", text: replyText }]);
+        return;
+      }
+
+      if (!data?.meal) {
+        setMessages((current) => [
+          ...current,
+          { id: makeId(), role: "assistant", text: data?.reply ?? "I could not interpret that meal. Please try a little more detail." },
+        ]);
+        return;
+      }
+
       const responseMessageId = makeId();
-      setPending(data.meal); setPendingMessageId(responseMessageId); setMessages((current) => [...current, { id: responseMessageId, role: "assistant", text: data.reply, meal: data.meal }]);
-    } catch (error) { setMessages((current) => [...current, { id: makeId(), role: "assistant", text: error instanceof Error ? error.message : "Something went wrong. Try again." }]); }
-    finally { setPendingRequests((count) => Math.max(0, count - 1)); }
+      setPending(data.meal);
+      setPendingMessageId(responseMessageId);
+      setMessages((current) => [
+        ...current,
+        { id: responseMessageId, role: "assistant", text: data.reply, meal: data.meal },
+      ]);
+    } catch (error) {
+      const statusCode = (error as any)?.status ?? undefined;
+      const rawError = (error as any)?.message ?? undefined;
+      const replyText = getErrorReply(statusCode, rawError);
+      setMessages((current) => [...current, { id: makeId(), role: "assistant", text: replyText }]);
+    } finally {
+      setPendingRequests((count) => Math.max(0, count - 1));
+    }
   }
 
   async function logMeal(meal: Meal, description = meal.items.map((item) => item.name).join(" + ") || "Meal", messageId?: string) {
