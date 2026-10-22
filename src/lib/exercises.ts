@@ -25,26 +25,35 @@ export type WorkoutExercise = {
 export const muscleGroups: Array<"All" | MuscleGroup> = ["All", "Chest", "Back", "Shoulders", "Arms", "Legs", "Core"];
 
 export const exerciseCatalog: ExerciseDefinition[] = [
-  { id: "barbell-bench-press", name: "Barbell Bench Press", muscleGroup: "Chest", equipment: "Barbell" },
+  // Chest
+  { id: "dumbbell-press", name: "Dumbbell Press", muscleGroup: "Chest", equipment: "Dumbbells" },
   { id: "incline-dumbbell-press", name: "Incline Dumbbell Press", muscleGroup: "Chest", equipment: "Dumbbells" },
-  { id: "push-up", name: "Push-up", muscleGroup: "Chest", equipment: "Bodyweight" },
-  { id: "pull-up", name: "Pull-up", muscleGroup: "Back", equipment: "Bodyweight" },
-  { id: "lat-pulldown", name: "Lat Pulldown", muscleGroup: "Back", equipment: "Cable" },
-  { id: "barbell-row", name: "Barbell Row", muscleGroup: "Back", equipment: "Barbell" },
-  { id: "seated-cable-row", name: "Seated Cable Row", muscleGroup: "Back", equipment: "Cable" },
-  { id: "overhead-press", name: "Overhead Press", muscleGroup: "Shoulders", equipment: "Barbell" },
-  { id: "lateral-raise", name: "Lateral Raise", muscleGroup: "Shoulders", equipment: "Dumbbells" },
-  { id: "face-pull", name: "Face Pull", muscleGroup: "Shoulders", equipment: "Cable" },
-  { id: "barbell-curl", name: "Barbell Curl", muscleGroup: "Arms", equipment: "Barbell" },
+  { id: "bench-press", name: "Bench Press", muscleGroup: "Chest", equipment: "Barbell" },
+  { id: "incline-bench-press", name: "Incline Bench Press", muscleGroup: "Chest", equipment: "Barbell" },
+  { id: "incline-chest-fly", name: "Incline Chest Fly", muscleGroup: "Chest", equipment: "Dumbbells" },
+  { id: "chest-fly", name: "Chest Fly", muscleGroup: "Chest", equipment: "Dumbbells" },
+  { id: "pec-deck-fly", name: "Pec Deck Fly", muscleGroup: "Chest", equipment: "Machine" },
+  { id: "chest-press", name: "Chest Press", muscleGroup: "Chest", equipment: "Machine" },
+
+  // Triceps
   { id: "triceps-pushdown", name: "Triceps Pushdown", muscleGroup: "Arms", equipment: "Cable" },
+  { id: "dumbbell-kickbacks", name: "Dumbbell Kickbacks", muscleGroup: "Arms", equipment: "Dumbbells" },
+  { id: "skull-crushers", name: "Skull Crushers", muscleGroup: "Arms", equipment: "Barbell" },
+  { id: "triceps-overhead-extension", name: "Triceps Overhead Extension", muscleGroup: "Arms", equipment: "Dumbbells" },
+
+  // Back
+  { id: "bent-over-row", name: "Bent Over Row", muscleGroup: "Back", equipment: "Barbell" },
+  { id: "lat-pulldown", name: "Lat Pulldown", muscleGroup: "Back", equipment: "Cable" },
+  { id: "chest-supported-row", name: "Chest-Supported Row", muscleGroup: "Back", equipment: "Machine" },
+  { id: "dumbbell-row", name: "Dumbbell Row", muscleGroup: "Back", equipment: "Dumbbells" },
+  { id: "t-bar-row", name: "T-Bar Row", muscleGroup: "Back", equipment: "Machine" },
+
+  // Biceps and Forearms
+  { id: "incline-dumbbell-curl", name: "Incline Dumbbell Curl", muscleGroup: "Arms", equipment: "Dumbbells" },
+  { id: "dumbbell-curl", name: "Dumbbell Curl", muscleGroup: "Arms", equipment: "Dumbbells" },
   { id: "hammer-curl", name: "Hammer Curl", muscleGroup: "Arms", equipment: "Dumbbells" },
-  { id: "barbell-squat", name: "Barbell Squat", muscleGroup: "Legs", equipment: "Barbell" },
-  { id: "leg-press", name: "Leg Press", muscleGroup: "Legs", equipment: "Machine" },
-  { id: "romanian-deadlift", name: "Romanian Deadlift", muscleGroup: "Legs", equipment: "Barbell" },
-  { id: "walking-lunge", name: "Walking Lunge", muscleGroup: "Legs", equipment: "Bodyweight" },
-  { id: "plank", name: "Plank", muscleGroup: "Core", equipment: "Bodyweight" },
-  { id: "hanging-knee-raise", name: "Hanging Knee Raise", muscleGroup: "Core", equipment: "Bodyweight" },
-  { id: "cable-crunch", name: "Cable Crunch", muscleGroup: "Core", equipment: "Cable" },
+  { id: "concentration-curl", name: "Concentration Curl", muscleGroup: "Arms", equipment: "Dumbbells" },
+  { id: "reverse-curl", name: "Reverse Curl", muscleGroup: "Arms", equipment: "Barbell" },
 ];
 
 export const makeSetId = () => `set-${Date.now()}-${Math.random().toString(36).slice(2)}`;
