@@ -3,7 +3,7 @@ import AnalyticsView from "@/components/AnalyticsView";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Analytics · compound.",
+  title: "Analytics · compound",
   description: "Historical nutrition trends, daily calorie and protein intake against your goals.",
 };
 

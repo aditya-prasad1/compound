@@ -12,8 +12,17 @@ import WorkoutCard from "@/components/WorkoutCard";
 type Message = { id: string; role: "user" | "assistant"; text?: string; meal?: Meal; logged?: boolean };
 type Entry = { id: string; description: string; meal: Meal; originalMessage: string; createdAt: string };
 type Targets = { calories: number; protein: number; carbs: number; fat: number };
+type ManualEntryDraft = { description: string; quantity: string; calories: string; protein: string; carbs: string; fat: string };
 
 const emptyTotals = { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
+const defaultManualEntry = (calories = 500): ManualEntryDraft => ({
+  description: "",
+  quantity: "1",
+  calories: String(calories),
+  protein: String(Math.round((calories * 0.2 / 4) * 10) / 10),
+  carbs: String(Math.round((calories * 0.5 / 4) * 10) / 10),
+  fat: String(Math.round((calories * 0.3 / 9) * 10) / 10),
+});
 const initialMessages: Message[] = [{ id: "welcome", role: "assistant", text: "Tell me what you ate. I’ll estimate it and help you build consistent habits." }];
 const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const localDateKey = (date = new Date()) => {
@@ -43,6 +52,8 @@ export default function CompoundHome() {
   const [chatOpen, setChatOpen] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualDraft, setManualDraft] = useState<ManualEntryDraft>(defaultManualEntry);
   const [calorieGoal, setCalorieGoal] = useState(2200);
   const [proteinGoal, setProteinGoal] = useState<number | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -242,6 +253,40 @@ export default function CompoundHome() {
     const recognition = new SpeechRecognition(); recognition.lang = "en-IN"; setListening(true); recognition.start(); recognition.onresult = (event) => setDraft(event.results[0][0].transcript); recognition.onend = () => setListening(false);
   }
 
+  async function addManualEntry(event: FormEvent) {
+    event.preventDefault();
+    const quantity = Number(manualDraft.quantity);
+    const calories = Number(manualDraft.calories);
+    const protein = Number(manualDraft.protein);
+    const carbs = Number(manualDraft.carbs);
+    const fat = Number(manualDraft.fat);
+    if (!manualDraft.description.trim() || !Number.isFinite(quantity) || quantity <= 0 || [calories, protein, carbs, fat].some((value) => !Number.isFinite(value) || value < 0)) return;
+    const meal: Meal = {
+      items: [{ name: manualDraft.description.trim(), quantity, unit: "serving", calories: calories * quantity, protein_g: protein * quantity, carbs_g: carbs * quantity, fat_g: fat * quantity, estimation_method: "database_or_ai_estimate", assumptions: ["Entered manually"] }],
+      totals: { calories: calories * quantity, protein_g: protein * quantity, carbs_g: carbs * quantity, fat_g: fat * quantity },
+      assumptions: ["Nutrition values entered manually."],
+      needs_clarification: false,
+    };
+    await logMeal(meal, `${quantity} x ${manualDraft.description.trim()}`);
+    setManualDraft(defaultManualEntry());
+    setManualOpen(false);
+  }
+
+  function updateManualCalories(value: string) {
+    const calories = Number(value);
+    if (!Number.isFinite(calories) || calories < 0) {
+      setManualDraft((current) => ({ ...current, calories: value }));
+      return;
+    }
+    setManualDraft((current) => ({
+      ...current,
+      calories: value,
+      protein: String(Math.round((calories * 0.2 / 4) * 10) / 10),
+      carbs: String(Math.round((calories * 0.5 / 4) * 10) / 10),
+      fat: String(Math.round((calories * 0.3 / 9) * 10) / 10),
+    }));
+  }
+
   function updateItem(index: number, patch: Partial<MealItem>) {
     if (!pending) return;
     const items = pending.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item);
@@ -255,7 +300,7 @@ export default function CompoundHome() {
   return <main className="app-shell">
     <header className="topbar">
       <div className="topbar-brand">
-        <Link href="/" className="brand">compound<span>.</span></Link>
+        <Link href="/" className="brand">compound</Link>
         <div className="eyebrow">small actions, lasting change</div>
       </div>
       <nav className="topbar-nav" aria-label="Main navigation">
@@ -284,7 +329,8 @@ export default function CompoundHome() {
     <section className="hero-summary"><div className="summary-layout"><div className="summary-main"><p className="section-kicker">{selectedDate === today ? "Daily intake" : `History · ${formatDate(selectedDate)}`}</p><div className="compound-line"><h1 className={calorieStatus}>{Math.round(totals.calories)} <span>/ {targets.calories} kcal</span></h1></div><div className={`progress-track ${calorieStatus}`}><div className="progress-fill" style={{ width: `${progress}%` }} /></div><div className="summary-foot"><span>{Math.max(0, Math.round(targets.calories - totals.calories))} kcal remaining</span><span>{Math.round(progress)}% of goal</span></div><div className="hero-actions"><button className="track-button" onClick={() => { setChatOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}><Plus />Track calories</button><button className="logs-button" onClick={() => setLogsOpen(true)}><ListIcon />View logs</button></div></div><div className="summary-meters" aria-label="Macronutrient summary"><Macro label="Protein" value={totals.protein_g} target={targets.protein} tone="dark" /><Macro label="Carbs" value={totals.carbs_g} target={targets.carbs} /><Macro label="Fat" value={totals.fat_g} target={targets.fat} /></div></div></section>
     <WorkoutCard selectedDate={selectedDate} authUserId={authUser?.id ?? null} />
     {logsOpen && <div className="logs-overlay"><section className="logs-panel" aria-label="Food logs"><div className="history-section"><div className="section-title"><div><p className="section-kicker">Journal</p><h2>Food logs</h2></div><button className="close-button" onClick={() => setLogsOpen(false)} aria-label="Close food logs"><Close /></button></div><div className="logs-toolbar"><span>{selectedDate === today ? "Today" : formatDate(selectedDate)}</span><button className="track-button compact" onClick={() => { setChatOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}><Plus />Track calories</button></div>{historyLoading && <span className="loading-label">Syncing</span>}{historyError && <p className="error-note">{historyError}</p>}{dayEntries.length ? <div className="entry-list">{[...dayEntries].reverse().map((entry) => <EntryRow entry={entry} key={entry.id} />)}</div> : <div className="empty-state"><div className="empty-mark">+</div><p>No meals logged {selectedDate === today ? "today" : "on this day"}.</p><button onClick={() => { setChatOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}>Start with a meal</button></div>}</div></section></div>}
-    {chatOpen && <div className="chat-overlay"><section className="chat-panel" aria-label="Food logging chat"><div className="chat-header"><div><p className="section-kicker">compound food log</p><h2>What did you eat?</h2></div><button className="close-button" onClick={() => setChatOpen(false)} aria-label="Close chat"><Close /></button></div><div className="chat-messages">{messages.map((message) => <div className={`message ${message.role}`} key={message.id}><div className="message-label">{message.role === "user" ? "You" : "compound."}</div>{message.text && <p>{message.text}</p>}{message.meal && <MealCard meal={message.id === pendingMessageId && pending ? pending : message.meal} pending={!message.logged} onUpdate={updateItem} onLog={() => logMeal(message.id === pendingMessageId && pending ? pending : message.meal!, undefined, message.id)} />}</div>)}{pendingRequests > 0 && <div className="chat-status"><Spinner /> Estimating {pendingRequests > 1 ? `${pendingRequests} meals` : "your meal"}...</div>}<div ref={messagesEndRef} /></div><form className="composer" onSubmit={sendMessage}><input ref={inputRef} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="e.g. 2 rotis and dal" aria-label="Food message" /><button type="button" className={listening ? "listening" : ""} onClick={startListening} aria-label="Use voice input"><Mic /></button><button className="send-button" type="submit" disabled={!draft.trim() || saving} aria-label="Send message"><ArrowUp /></button></form></section></div>}
+    {chatOpen && <div className="chat-overlay"><section className="chat-panel" aria-label="Food logging chat"><div className="chat-header"><div><p className="section-kicker">compound food log</p><h2>What did you eat?</h2></div><button className="close-button" onClick={() => setChatOpen(false)} aria-label="Close chat"><Close /></button></div><div className="chat-messages">{messages.map((message) => <div className={`message ${message.role}`} key={message.id}><div className="message-label">{message.role === "user" ? "You" : "compound"}</div>{message.text && <p>{message.text}</p>}{message.meal && <MealCard meal={message.id === pendingMessageId && pending ? pending : message.meal} pending={!message.logged} onUpdate={updateItem} onLog={() => logMeal(message.id === pendingMessageId && pending ? pending : message.meal!, undefined, message.id)} />}</div>)}{pendingRequests > 0 && <div className="chat-status"><Spinner /> Estimating {pendingRequests > 1 ? `${pendingRequests} meals` : "your meal"}...</div>}<div ref={messagesEndRef} /></div><form className="composer" onSubmit={sendMessage}><button type="button" className="manual-chat-button" onClick={() => setManualOpen(true)} aria-label="Add nutrition manually" title="Add nutrition manually"><Plus /></button><input ref={inputRef} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="e.g. 2 rotis and dal" aria-label="Food message" /><button type="button" className={listening ? "listening" : ""} onClick={startListening} aria-label="Use voice input"><Mic /></button><button className="send-button" type="submit" disabled={!draft.trim() || saving} aria-label="Send message"><ArrowUp /></button></form></section></div>}
+    {manualOpen && <div className="modal-backdrop" onClick={() => setManualOpen(false)}><form className="settings manual-entry" onClick={(event) => event.stopPropagation()} onSubmit={addManualEntry}><div className="section-title"><div><p className="section-kicker">Quick add</p><h2>Manual nutrition</h2></div><button type="button" className="close-button" onClick={() => setManualOpen(false)} aria-label="Close manual nutrition"><Close /></button></div><label>Food or entry name<input required value={manualDraft.description} onChange={(event) => setManualDraft({ ...manualDraft, description: event.target.value })} placeholder="e.g. Roti" /></label><div className="manual-fields"><label>Quantity<input required type="number" min="0.1" step="0.1" value={manualDraft.quantity} onChange={(event) => setManualDraft({ ...manualDraft, quantity: event.target.value })} /></label><label>Calories per serving<input required type="number" min="0" step="1" value={manualDraft.calories} onChange={(event) => updateManualCalories(event.target.value)} /></label><label>Protein (g)<input required type="number" min="0" step="0.1" value={manualDraft.protein} onChange={(event) => setManualDraft({ ...manualDraft, protein: event.target.value })} /></label><label>Carbs (g)<input required type="number" min="0" step="0.1" value={manualDraft.carbs} onChange={(event) => setManualDraft({ ...manualDraft, carbs: event.target.value })} /></label><label>Fat (g)<input required type="number" min="0" step="0.1" value={manualDraft.fat} onChange={(event) => setManualDraft({ ...manualDraft, fat: event.target.value })} /></label></div><button className="confirm-button" type="submit" disabled={saving}>Add to {selectedDate === today ? "today" : formatDate(selectedDate)} <ArrowUp /></button></form></div>}
     {showSettings && <div className="modal-backdrop" onClick={() => setShowSettings(false)}><section className="settings" onClick={(event) => event.stopPropagation()}><div className="section-title"><div><p className="section-kicker">Preferences</p><h2>Daily goals</h2></div><button className="close-button" onClick={() => setShowSettings(false)} aria-label="Close settings"><Close /></button></div><label>Calories<input type="number" min="1" value={calorieGoal} onChange={(event) => setCalorieGoal(Number(event.target.value) || 1)} /></label><label>Protein (g)<input type="number" min="1" value={proteinGoal ?? getTargets(calorieGoal).protein} onChange={(event) => setProteinGoal(Number(event.target.value) || null)} /></label><p className="settings-note">Default macros use 50% carbs, 20% protein, and 30% fat. A custom protein goal keeps the remaining calories split between carbs and fat.</p><div className="auth-section"><p className="section-kicker">Account</p>{authUser ? <><p className="auth-email">{authUser.email ?? "Google account connected"}</p><button type="button" className="signout-button" onClick={() => void signOut()}>Sign out</button></> : <><p className="settings-note">Sign in with Google to sync your meals and workouts across devices.</p><button type="button" className="google-button" onClick={() => void signInWithGoogle()}>Continue with Google</button></>}</div></section></div>}
   </main>;
 }

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "compound.",
+  title: "compound",
   description: "Build better health through small, compounding actions.",
   manifest: "/manifest.webmanifest",
 };

@@ -312,7 +312,7 @@ export default function AnalyticsView() {
       <header className="topbar">
         <div className="topbar-brand">
           <Link href="/" className="brand">
-            compound<span>.</span>
+            compound
           </Link>
           <div className="eyebrow">small actions, lasting change</div>
         </div>
